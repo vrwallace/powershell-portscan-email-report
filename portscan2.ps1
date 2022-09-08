@@ -6,111 +6,106 @@
 # Probes selected ports on all host located in C:\support\firewalllist.txt and grabs a banner if available
 ###################################
 
-function ConvertFrom-Hexadecimal([string] $hexString)
-{
+function ConvertFrom-Hexadecimal([string] $hexString) {
     [byte[]] $data = @()
 
-    if ([string]::IsNullOrEmpty($hexString) -eq $true -or $hexString.Length % 2 -ne 0)
-    {
+    if ([string]::IsNullOrEmpty($hexString) -eq $true -or $hexString.Length % 2 -ne 0) {
         throw New-Object FormatException("Hexadecimal string must not be empty and must contain an even number of digits to be valid.");
     }
 
     $hexString = $hexString.ToUpperInvariant()
     $data = New-Object byte[] -ArgumentList ($hexString.Length / 2)
 
-    for ([int] $index = 0; $index -lt $hexString.Length; $index += 2)
-    {
+    for ([int] $index = 0; $index -lt $hexString.Length; $index += 2) {
         [int] $highDigitValue = if ($hexString[$index] -le ([char] '9')) { $hexString[$index] - ([char] '0') } else { $hexString[$index] - ([char] 'A') + 10 }
         [int] $lowDigitValue = if ($hexString[$index + 1] -le ([char] '9')) { $hexString[$index + 1] - ([char] '0') } else { $hexString[$index + 1] - ([char] 'A') + 10 }
 
-        if ($highDigitValue -lt 0 -or $lowDigitValue -lt 0 -or $highDigitValue -gt 15 -or $lowDigitValue -gt 15)
-        {
+        if ($highDigitValue -lt 0 -or $lowDigitValue -lt 0 -or $highDigitValue -gt 15 -or $lowDigitValue -gt 15) {
             throw New-Object FormatException("An invalid digit was encountered. Valid hexadecimal digits are 0-9 and A-F.")
         }
-        else
-        {
+        else {
             [byte] $value = [byte](($highDigitValue -shl 4) -bor ($lowDigitValue -band 0x0F))
             $data[$index / 2] = $value;
         }
     }
 
-    return ,$data
+    return , $data
 }
 
 
 $services = @{
-    7 = "echo";
-    9 = "discard";
-    13 = "daytime";
-    17 = "qotd";
-    19 = "chargen";
-    20 = "ftp-data";
-    21 = "ftp";
-    22 = "ssh";
-    23 = "telnet";
-    25 = "smtp";
-    26 = "rsftp";
-    43 = "whois";
-    53 = "domain";
-    69 = "tftp";
-    79 = "finger";
-    80 = "http";
-    109 = "pop2";
-    110 = "pop3";
-    111 = "sunrpc";
-    113 = "auth";
-    115 = "sftp";
-    119 = "nntp";
-    123 = "ntp";
-    135 = "epmap";
-    137 = "netbios-ns";
-    138 = "netbios-ds";
-    139 = "netbios-ssn";
-    143 = "imap2";
-    161 = "snmp";
-    162 = "snmptrap";
-    199 = "smux";
-    247 = "subntbcst-tftp";
-    389 = "ldap";
-    443 = "https";
-    445 = "microsoft-ds";
-    465 = "submissions";
-    513 = "login";
-    514 = "shell";
-    554 = "rtsp";
-    587 = "submission";
-    631 = "ipp";
-    636 = "ldaps";
-    902 = "vmware";
-    989 = "ftps-data";
-    990 = "ftps";
-    992 = "telnets";
-    993 = "imaps";
-    995 = "pop3s";
-    1433 = "ms-sql-s";
-    1720 = "h323";
-    1723 = "pptp";
-    1758 = "tftp-mcast";
-    1818 = "etftp";
-    2525 = "smtp-alt";
-    3713 = "tftps";
-    3306 = "mysql";
-    3389 = "ms-wbt-server";
-    4433 = "sonicwall";
-    5432 = "postgresql";
-    5500 = "fcp-addr-srvr1";
-    5800 = "vnc1";
-    5900 = "vnc2";
-    8080 = "http-alt";
-    8888 = "althttpd";
-    9100 = "jetdirect";
-    1080 = "W32.Beagle; WinHole; HLLW.Deadhat;  Webus";
-    2745 = "Bagle Virus Backdoor; Beagle";
-    3127 = "W32.Mockbot; Solame;  Novarg(Mydoom); W32.HLLW.Deadhat";
-    4444 = "Napster; Prosiak; Swift Remote; Blaster.Worm;  W32.HLLW.Donk; W32.Mockbot; W32.Reidana";
-    5554 = "W32.Dabber; Sasser";
-    8866 = "W32.Beagle";
-    9898 = "CrashCool; Dabber";
+    7     = "echo";
+    9     = "discard";
+    13    = "daytime";
+    17    = "qotd";
+    19    = "chargen";
+    20    = "ftp-data";
+    21    = "ftp";
+    22    = "ssh";
+    23    = "telnet";
+    25    = "smtp";
+    26    = "rsftp";
+    43    = "whois";
+    53    = "domain";
+    69    = "tftp";
+    79    = "finger";
+    80    = "http";
+    109   = "pop2";
+    110   = "pop3";
+    111   = "sunrpc";
+    113   = "auth";
+    115   = "sftp";
+    119   = "nntp";
+    123   = "ntp";
+    135   = "epmap";
+    137   = "netbios-ns";
+    138   = "netbios-ds";
+    139   = "netbios-ssn";
+    143   = "imap2";
+    161   = "snmp";
+    162   = "snmptrap";
+    199   = "smux";
+    247   = "subntbcst-tftp";
+    389   = "ldap";
+    443   = "https";
+    445   = "microsoft-ds";
+    465   = "submissions";
+    513   = "login";
+    514   = "shell";
+    554   = "rtsp";
+    587   = "submission";
+    631   = "ipp";
+    636   = "ldaps";
+    902   = "vmware";
+    989   = "ftps-data";
+    990   = "ftps";
+    992   = "telnets";
+    993   = "imaps";
+    995   = "pop3s";
+    1433  = "ms-sql-s";
+    1720  = "h323";
+    1723  = "pptp";
+    1758  = "tftp-mcast";
+    1818  = "etftp";
+    2525  = "smtp-alt";
+    3713  = "tftps";
+    3306  = "mysql";
+    3389  = "ms-wbt-server";
+    4433  = "sonicwall";
+    5432  = "postgresql";
+    5500  = "fcp-addr-srvr1";
+    5800  = "vnc1";
+    5900  = "vnc2";
+    8080  = "http-alt";
+    8888  = "althttpd";
+    9100  = "jetdirect";
+    1080  = "W32.Beagle; WinHole; HLLW.Deadhat;  Webus";
+    2745  = "Bagle Virus Backdoor; Beagle";
+    3127  = "W32.Mockbot; Solame;  Novarg(Mydoom); W32.HLLW.Deadhat";
+    4444  = "Napster; Prosiak; Swift Remote; Blaster.Worm;  W32.HLLW.Donk; W32.Mockbot; W32.Reidana";
+    5554  = "W32.Dabber; Sasser";
+    8866  = "W32.Beagle";
+    9898  = "CrashCool; Dabber";
     12345 = "Amitis; Ashley; Cron/Crontab; Fat Bitch Trojan; GabanBus; Mypic; NetBus; NetBus Toy; NetBus Worm; Pie Bill Gates; Whack Job; X-bill";
     27374 = "Bad Blood; Baste; Ramen; Seeker; SubSeven; Subseven 2.1.4 DefCon 8;  SubSeven Muie; Ttfloader";
     31337 = "Back Orifice; Back Orifice 1.20 Patches; Back Orifice Russian; Baron Night; Beeone; BO Client; BO Facil; BO Spy; BO2; Cron/Crontab;  Emcommander; Freak2k; Freak88; c; Sockdmini; W32.HLLW.Gool"
@@ -135,6 +130,7 @@ $smtpto = "someone@somewhere.net"
 $sendusername = "someone@somewhere.net"
 $sendpassword = "password"
 
+$firewalllist="C:\support\firewalllist.txt"
 
 $report = @"
 <style>
@@ -180,15 +176,15 @@ $trig_imap = "CAPABILITY`r`n"
 
 
 
-$stream_reader = New-Object System.IO.StreamReader { C:\somefolder\firewalllist.txt }
+$stream_reader = New-Object System.IO.StreamReader ( $firewalllist )
 while ($null -ne ($current_line = $stream_reader.ReadLine())) {
     $Computername = $current_line
 
 
 
-    $services.keys | ForEach-Object {
-        $item=$_
-        $service=$($services[$_])
+    $services.keys | Sort-object $_ | ForEach-Object {
+        $item = $_
+        $service = $($services[$_])
         write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
         $rts = ""
    
@@ -211,67 +207,70 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
 
 
             try {
-                if (80, 443, 631 -contains $Item) {
-                    $writer.WriteLine($trig_http) 
-                }
-     
-                if (25, 26, 465, 587 -contains $Item) {
-                    $writer.WriteLine($trig_smtp) 
-                }
- 
-    
-                if (21, 69, 247, 1758, 1818, 3713 -contains $Item) {
-                    $writer.WriteLine($trig_ftp) 
-        
-                }
-                if (23 -contains $Item) {
-                    $writer.WriteLine($trig_telnet) 
-                }
-   
-                if (109, 110, 995 -contains $Item) {
-                    $writer.WriteLine($trig_pop) 
-                }
-                if (119 -contains $Item) {
-                    $writer.WriteLine($trig_nntp) 
-        
-                }
-                if (137 -contains $Item) {
-                    $writer.WriteLine($trig_nbns) 
-    
-                }
-                if (389, 636 -contains $Item) {
-                    $writer.WriteLine($trig_ldap) 
-        
-                }
-                if (1433 -contains $Item) {
-                    $writer.WriteLine($trig_mssql) 
-        
-                }
-                if (161 -contains $item) {
-                    $writer.WriteLine($trig_snmp) 
-                }
-                if (123 -contains $Item) {
-                    $writer.WriteLine($trig_ntp)
-        
-                }
-                if (79 -contains $Item) {
-                    $writer.WriteLine($trig_finger)
-        
-                }
-                if (7, 9 -contains $Item) {
-                    $writer.WriteLine($trig_echo)
-        
-                }
-                if (256 -contains $Item) {
-                    $writer.WriteLine($trig_fw1admin)
-      
+                
+                switch ( $item ) {
+                    ({ 80, 443, 631 -contains $PSItem }) {
+                        $writer.WriteLine($trig_http)
+                        break;
+                    }
+                    ({ 25, 26, 465, 587 -contains $PSItem }) {
+                        $writer.WriteLine($trig_smtp)
+                        break;
+                    }
+                    ({ 21, 69, 247, 1758, 1818, 3713 -contains $PSItem }) {
+                        $writer.WriteLine($trig_ftp)
+                        break;
+                    }
+                    ({ 23 -contains $PSItem }) {
+                        $writer.WriteLine($trig_telnet)
+                        break;
+                    }
+                    ({ 109, 110, 995 -contains $PSItem }) {
+                        $writer.WriteLine($trig_pop)
+                        break;
+                    }
+                    ({ 119 -contains $PSItem }) {
+                        $writer.WriteLine($trig_nntp)
+                        break;
+                    }
+                    ({ 137 -contains $PSItem }) {
+                        $writer.WriteLine($trig_nbns)
+                        break;
+                    }
+                    ({ 389, 636 -contains $PSItem }) {
+                        $writer.WriteLine($trig_ldap)
+                        break;
+                    } ({ 1433 -contains $PSItem }) {
+                        $writer.WriteLine($trig_mssql)
+                        break;
+                    }
+                    ({ 162 -contains $PSItem }) {
+                        $writer.WriteLine($trig_snmp)
+                        break;
+                    }
+                 
+                    ({ 123 -contains $PSItem }) {
+                        $writer.WriteLine($trig_ntp)
+                        break;
+                    } ({ 79 -contains $PSItem }) {
+                        $writer.WriteLine($trig_finger)
+                        break;
+                    } ({ 7, 9 -contains $PSItem }) {
+                        $writer.WriteLine($trig_echo)
+                        break;
+                    } ({ 256 -contains $PSItem }) {
+                        $writer.WriteLine($trig_fw1admin)
+                        break;
+                    }
+                    Default {
+                        $writer.WriteLine($trig_null)
+                        break;
+                    }
                 }
 
-                if (13, 17, 19, 22, 445, 902, 3306, 4433, 5800, 5900, 9100 -contains $Item) {
-                    $writer.WriteLine($trig_null)
-    
-                }
-               Start-Sleep -Seconds 2
+
+
+                # Start-Sleep -Seconds 2
     
             }
             catch {}
