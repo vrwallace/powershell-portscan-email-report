@@ -270,7 +270,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
 
 
 
-                # Start-Sleep -Seconds 2
+                Start-Sleep -Seconds 2
     
             }
             catch {}
