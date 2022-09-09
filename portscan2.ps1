@@ -130,6 +130,7 @@ $smtpto = "someone@somewhere.net"
 $sendusername = "someone@somewhere.net"
 $sendpassword = "password"
 
+
 $firewalllist="C:\support\firewalllist.txt"
 
 $report = @"
@@ -283,7 +284,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             $rts = $rts -replace "`r`n", "<br>"
             write-host $Computername $rts
 
-            $report = $report + "<tr><td>" + $Computername + "</td><td>" + $Item + "</td><td>Yes</td><td>" + $service + "</td><td>" + $rts + "</td></tr>" 
+            $report = $report + "<tr><td>" + $Computername + "</td><td>" + $Item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
         
             $reader.Close()
             $writer.Close()
