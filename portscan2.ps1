@@ -271,19 +271,22 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 }
 
                 #Start-Sleep -Seconds 4
+
+                try { 
+                               
+                    $rts = $reader.ReadToEnd()
+                     
+                }
+                catch {Write-Warning  $Error[0]
+                    $rts=$Error[0]}
     
             }
-            catch { Write-Warning  $Error[0] }
-
-            try { 
-                               
-                $rts = $reader.ReadToEnd() 
+            catch { Write-Warning  $Error[0]
+                $rts=$Error[0]
             }
-            catch {}
-      
-            $rts = $rts -replace '<.*?>', ''
 
-            $rts = $rts -replace "`r`n", "<br>"
+            $rts = $rts -replace '<.*?>', ''
+            $rts = $rts -replace "`r`n", "<br>"          
             write-host $Computername $rts
 
             $report = $report + "<tr><td>" + $Computername + "</td><td>" + $item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
