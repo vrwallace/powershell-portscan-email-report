@@ -33,6 +33,7 @@ function ConvertFrom-Hexadecimal([string] $hexString) {
 }
 
 
+
 $services = @{
     7     = "echo";
     9     = "discard";
@@ -110,28 +111,24 @@ $services = @{
     27374 = "Bad Blood; Baste; Ramen; Seeker; SubSeven; Subseven 2.1.4 DefCon 8;  SubSeven Muie; Ttfloader";
     31337 = "Back Orifice; Back Orifice 1.20 Patches; Back Orifice Russian; Baron Night; Beeone; BO Client; BO Facil; BO Spy; BO2; Cron/Crontab;  Emcommander; Freak2k; Freak88; c; Sockdmini; W32.HLLW.Gool"
 }
+#Test
+<#$services = @{
+    21     = "ftp";
+    80     = "http"
+}#>
 
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
-
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 #settings
 $Version = "1.00ps"
 $smtpserver = "smtp.office365.com"
 $smtpport = "587"
-    
-
-
 $smtpfrom = "someone@somewhere.net"
-    
 $smtpto = "someone@somewhere.net"
-    
-
 $sendusername = "someone@somewhere.net"
 $sendpassword = "password"
-
-
-$firewalllist="C:\support\firewalllist.txt"
+$firewalllist = "C:\support\firewalllist.txt"
 
 $report = @"
 <style>
@@ -142,8 +139,7 @@ TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
 "@    
 $report = $report + "<h4>Open Ports Report</h4>"
 $report = $report + "<h4>Version: " + $version + "</h4><br>"
-
-       
+     
 $report = $report + "<h4>Open Ports for</h4>"      
 
 $report = $report + "<table style=""width:100%"">
@@ -175,13 +171,9 @@ $trig_ftp = "HELP`nUSER anonymous`nPASS banner@grab.com`nQUIT`n"
 $trig_echo = "Echo`r`n"
 $trig_imap = "CAPABILITY`r`n"
 
-
-
 $stream_reader = New-Object System.IO.StreamReader ( $firewalllist )
 while ($null -ne ($current_line = $stream_reader.ReadLine())) {
     $Computername = $current_line
-
-
 
     $services.keys | Sort-object $_ | ForEach-Object {
         $item = $_
@@ -191,21 +183,22 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
    
         try {
             
-            $tcpConnection = New-Object System.Net.Sockets.TcpClient($Computername, $Item)
-            
+            $tcpConnection = new-object System.Net.Sockets.TcpClient
+            $tcpConnection.Connect($Computername, $item)
         }
     
         catch {}
       
         
         if ($tcpConnection.Connected) {
-            $tcpConnection.ReceiveTimeout = 2000;
-            $tcpConnection.SendTimeout = 2000;
-            $tcpStream = $tcpConnection.GetStream()
+            write-host "Host" $Computername "Port: " $item "Service: " $service "is open"
+            $tcpStream = $tcpConnection.GetStream() 
+            $tcpConnection.ReceiveTimeout = 5000;
+            $tcpConnection.SendTimeout = 5000;
+           
             $reader = New-Object System.IO.StreamReader($tcpStream)
             $writer = New-Object System.IO.StreamWriter($tcpStream)
             $writer.AutoFlush = $true
-
 
             try {
                 
@@ -216,6 +209,10 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     }
                     ({ 25, 26, 465, 587 -contains $PSItem }) {
                         $writer.WriteLine($trig_smtp)
+                        break;
+                    }
+                    ({ 143, 993 -contains $PSItem }) {
+                        $writer.WriteLine($trig_imap)
                         break;
                     }
                     ({ 21, 69, 247, 1758, 1818, 3713 -contains $PSItem }) {
@@ -241,7 +238,8 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     ({ 389, 636 -contains $PSItem }) {
                         $writer.WriteLine($trig_ldap)
                         break;
-                    } ({ 1433 -contains $PSItem }) {
+                    }
+                     ({ 1433 -contains $PSItem }) {
                         $writer.WriteLine($trig_mssql)
                         break;
                     }
@@ -253,13 +251,16 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     ({ 123 -contains $PSItem }) {
                         $writer.WriteLine($trig_ntp)
                         break;
-                    } ({ 79 -contains $PSItem }) {
+                    }
+                     ({ 79 -contains $PSItem }) {
                         $writer.WriteLine($trig_finger)
                         break;
-                    } ({ 7, 9 -contains $PSItem }) {
+                    }
+                     ({ 7, 9 -contains $PSItem }) {
                         $writer.WriteLine($trig_echo)
                         break;
-                    } ({ 256 -contains $PSItem }) {
+                    }
+                     ({ 256 -contains $PSItem }) {
                         $writer.WriteLine($trig_fw1admin)
                         break;
                     }
@@ -269,14 +270,15 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     }
                 }
 
-
-
-                Start-Sleep -Seconds 2
+                #Start-Sleep -Seconds 4
     
             }
-            catch {}
+            catch { Write-Warning  $Error[0] }
 
-            try { $rts = $reader.ReadToEnd() }
+            try { 
+                               
+                $rts = $reader.ReadToEnd() 
+            }
             catch {}
       
             $rts = $rts -replace '<.*?>', ''
@@ -284,16 +286,24 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             $rts = $rts -replace "`r`n", "<br>"
             write-host $Computername $rts
 
-            $report = $report + "<tr><td>" + $Computername + "</td><td>" + $Item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
+            $report = $report + "<tr><td>" + $Computername + "</td><td>" + $item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
         
-            $reader.Close()
-            $writer.Close()
-            $tcpConnection.Close()
-
+            try {
+                $reader.Close()
+            }
+            Catch {}
+            try {
+                $writer.Close()
+            }
+            catch {}
+            try { 
+                $tcpConnection.Close()
+            } 
+            catch {}
         }
     }
 }
-$stream_reader.Close()
+$stream_reader.Dispose()
 
 $report = $report + "</table>"
 
