@@ -164,7 +164,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
         write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
         $rts = ""
        
-        $TCPTimeout = 100
+        $TCPTimeout = 300
              
         try {
             $tcpConnection = new-object System.Net.Sockets.TcpClient
@@ -264,7 +264,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 }
                 catch {
                     Write-Warning  $Error[0]
-                    $rts = $rts + $Error[0]
+                   # $rts = $rts + $Error[0]
                 }
                 <#try { 
                                
@@ -279,7 +279,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             }
             catch {
                 Write-Warning  $Error[0]
-                $rts = $Error[0]
+                #$rts = $Error[0]
             }
 
             $rts = $rts -replace '<.*?>', ''
