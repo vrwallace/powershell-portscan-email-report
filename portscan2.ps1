@@ -6,31 +6,13 @@
 # Probes selected ports on all host located in C:\support\firewalllist.txt and grabs a banner if available
 ###################################
 
-function ConvertFrom-Hexadecimal([string] $hexString) {
-    [byte[]] $data = @()
-
-    if ([string]::IsNullOrEmpty($hexString) -eq $true -or $hexString.Length % 2 -ne 0) {
-        throw New-Object FormatException("Hexadecimal string must not be empty and must contain an even number of digits to be valid.");
-    }
-
-    $hexString = $hexString.ToUpperInvariant()
-    $data = New-Object byte[] -ArgumentList ($hexString.Length / 2)
-
-    for ([int] $index = 0; $index -lt $hexString.Length; $index += 2) {
-        [int] $highDigitValue = if ($hexString[$index] -le ([char] '9')) { $hexString[$index] - ([char] '0') } else { $hexString[$index] - ([char] 'A') + 10 }
-        [int] $lowDigitValue = if ($hexString[$index + 1] -le ([char] '9')) { $hexString[$index + 1] - ([char] '0') } else { $hexString[$index + 1] - ([char] 'A') + 10 }
-
-        if ($highDigitValue -lt 0 -or $lowDigitValue -lt 0 -or $highDigitValue -gt 15 -or $lowDigitValue -gt 15) {
-            throw New-Object FormatException("An invalid digit was encountered. Valid hexadecimal digits are 0-9 and A-F.")
-        }
-        else {
-            [byte] $value = [byte](($highDigitValue -shl 4) -bor ($lowDigitValue -band 0x0F))
-            $data[$index / 2] = $value;
-        }
-    }
-
-    return , $data
+function HexToString($i) {
+    $r = ""
+    for ($n = 0; $n -lt $i.Length; $n += 2)
+    { $r += [char][int]("0x" + $i.Substring($n, 2)) }
+    return $r
 }
+
 
 
 
@@ -121,7 +103,7 @@ $services = @{
 
 
 #settings
-$Version = "1.00ps"
+$Version = "1.03ps"
 $smtpserver = "smtp.office365.com"
 $smtpport = "587"
 $smtpfrom = "someone@somewhere.net"
@@ -129,6 +111,7 @@ $smtpto = "someone@somewhere.net"
 $sendusername = "someone@somewhere.net"
 $sendpassword = "password"
 $firewalllist = "C:\support\firewalllist.txt"
+
 
 $report = @"
 <style>
@@ -155,17 +138,17 @@ $report = $report + "<table style=""width:100%"">
 $trig_null = ""
 $trig_http = "OPTIONS / HTTP/1.0`r`n`r`n"
 #$trig_http="HEAD /  HTTP/1.0`r`n`r`n";
-$trig_mssql = ConvertFrom-Hexadecimal("100100e000000100d80000000100007100000000000000076c04000000000000e0030000000000000908000056000a006a000a007e0000007e002000be00090000000000d0000400d8000000d8000000000c29c6634200000000c8000000420061006e006e00650072004700720061006200420061006e006e006500720047007200610062004d006900630072006f0073006f0066007400200044006100740061002000410063006300650073007300200043006f006d0070006f006e0065006e00740073003100320037002e0030002e0030002e0031004f00440042004300")
-$trig_ldap = ConvertFrom-Hexadecimal("300c0201016007020103040080003035020102633004000a01000a0100020100020100010100870b6f626a656374436c6173733010040e6e616d696e67436f6e7465787473");
+$trig_mssql = hextostring("100100e000000100d80000000100007100000000000000076c04000000000000e0030000000000000908000056000a006a000a007e0000007e002000be00090000000000d0000400d8000000d8000000000c29c6634200000000c8000000420061006e006e00650072004700720061006200420061006e006e006500720047007200610062004d006900630072006f0073006f0066007400200044006100740061002000410063006300650073007300200043006f006d0070006f006e0065006e00740073003100320037002e0030002e0030002e0031004f00440042004300")
+$trig_ldap = hextostring("300c0201016007020103040080003035020102633004000a01000a0100020100020100010100870b6f626a656374436c6173733010040e6e616d696e67436f6e7465787473");
 #$trig_smtp="HELO bannergrab.com`r`nHELP`r`nVRFY postmaster`r`nVRFY bannergrab123`r`nEXPN postmaster`r`nQUIT`r`n";
 $trig_smtp = "HELO bannergrab.com`r`nHELP`r`nQUIT`r`n"
 $trig_fw1admin = "???`r`n?`r`n"
-$trig_nbns = ConvertFrom-Hexadecimal("a2480000000100000000000020434b4141414141414141414141414141414141414141414141414141414141410000210001")
-$trig_ntp = ConvertFrom-Hexadecimal("e30004fa000100000001000000000000000000000000000000000000000000000000000000000000ca9ba3352d7f950b160200010000000000000000160100010000000000000000")
+$trig_nbns = hextostring("a2480000000100000000000020434b4141414141414141414141414141414141414141414141414141414141410000210001")
+$trig_ntp = hextostring("e30004fa000100000001000000000000000000000000000000000000000000000000000000000000ca9ba3352d7f950b160200010000000000000000160100010000000000000000")
 $trig_nntp = "HELP`r`nLIST NEWSGROUPS`r`nQUIT`r`n"
 $trig_pop = "QUIT`r`n"
 $trig_finger = "root bin lp wheel spool adm mail postmaster news uucp snmp daemon`r`n"
-$trig_snmp = ConvertFrom-Hexadecimal("302902010004067075626c6963a01c0204ffffffff020100020100300e300c06082b060102010101000500302a020100040770726976617465a01c0204fffffffe020100020100300e300c06082b060102010101000500")
+$trig_snmp = hextostring("302902010004067075626c6963a01c0204ffffffff020100020100300e300c06082b060102010101000500302a020100040770726976617465a01c0204fffffffe020100020100300e300c06082b060102010101000500")
 $trig_telnet = "`r`r";
 $trig_ftp = "HELP`nUSER anonymous`nPASS banner@grab.com`nQUIT`n"
 $trig_echo = "Echo`r`n"
@@ -181,7 +164,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
         write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
         $rts = ""
        
-       $TCPTimeout = 100
+        $TCPTimeout = 100
              
         try {
             $tcpConnection = new-object System.Net.Sockets.TcpClient
