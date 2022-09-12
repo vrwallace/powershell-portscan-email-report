@@ -255,8 +255,18 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 }
 
                 #Start-Sleep -Seconds 4
-
-                try { 
+                try {
+                while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
+                   
+                        $rts = $rts + ([char]$reader.Read())
+                    }
+                    
+                }
+                catch {
+                    Write-Warning  $Error[0]
+                    $rts = $rts + $Error[0]
+                }
+                <#try { 
                                
                     $rts = $reader.ReadToEnd()
                      
@@ -264,7 +274,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 catch {
                     Write-Warning  $Error[0]
                     $rts = $Error[0]
-                }
+                }#>
     
             }
             catch {
