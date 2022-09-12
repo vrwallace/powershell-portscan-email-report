@@ -180,21 +180,22 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
         $service = $($services[$_])
         write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
         $rts = ""
-   
+       
+       $TCPTimeout = 100
+             
         try {
-            
             $tcpConnection = new-object System.Net.Sockets.TcpClient
-            $tcpConnection.Connect($Computername, $item)
+            $AsyncResult = $tcpConnection.BeginConnect($Computername, $item, $null, $null)
+            $Wait = $AsyncResult.AsyncWaitHandle.WaitOne($TCPtimeout) 
         }
-    
         catch {}
-      
-        
-        if ($tcpConnection.Connected) {
+
+        If ($Wait) {  
+            
             write-host "Host" $Computername "Port: " $item "Service: " $service "is open"
             $tcpStream = $tcpConnection.GetStream() 
-            $tcpConnection.ReceiveTimeout = 5000;
-            $tcpConnection.SendTimeout = 5000;
+            $tcpConnection.ReceiveTimeout = 2000;
+            $tcpConnection.SendTimeout = 2000;
            
             $reader = New-Object System.IO.StreamReader($tcpStream)
             $writer = New-Object System.IO.StreamWriter($tcpStream)
@@ -277,12 +278,15 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     $rts = $reader.ReadToEnd()
                      
                 }
-                catch {Write-Warning  $Error[0]
-                    $rts=$Error[0]}
+                catch {
+                    Write-Warning  $Error[0]
+                    $rts = $Error[0]
+                }
     
             }
-            catch { Write-Warning  $Error[0]
-                $rts=$Error[0]
+            catch {
+                Write-Warning  $Error[0]
+                $rts = $Error[0]
             }
 
             $rts = $rts -replace '<.*?>', ''
