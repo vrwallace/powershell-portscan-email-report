@@ -103,7 +103,7 @@ $services = @{
 
 
 #settings
-$Version = "1.03ps"
+$Version = "1.04ps"
 $smtpserver = "smtp.office365.com"
 $smtpport = "587"
 $smtpfrom = "someone@somewhere.net"
@@ -135,8 +135,9 @@ $report = $report + "<table style=""width:100%"">
   </tr>"
 
 
-$trig_null = ""
-$trig_http = "OPTIONS / HTTP/1.0`r`n`r`n"
+$trig_null = $null
+#$trig_http = "OPTIONS / HTTP/1.0`r`n`r`n"
+$trig_http ="GET / HTTP/1.0`r`n`r`n"
 #$trig_http="HEAD /  HTTP/1.0`r`n`r`n";
 $trig_mssql = hextostring("100100e000000100d80000000100007100000000000000076c04000000000000e0030000000000000908000056000a006a000a007e0000007e002000be00090000000000d0000400d8000000d8000000000c29c6634200000000c8000000420061006e006e00650072004700720061006200420061006e006e006500720047007200610062004d006900630072006f0073006f0066007400200044006100740061002000410063006300650073007300200043006f006d0070006f006e0065006e00740073003100320037002e0030002e0030002e0031004f00440042004300")
 $trig_ldap = hextostring("300c0201016007020103040080003035020102633004000a01000a0100020100020100010100870b6f626a656374436c6173733010040e6e616d696e67436f6e7465787473");
@@ -157,7 +158,7 @@ $trig_imap = "CAPABILITY`r`n"
 $stream_reader = New-Object System.IO.StreamReader ( $firewalllist )
 while ($null -ne ($current_line = $stream_reader.ReadLine())) {
     $Computername = $current_line
-
+   if ($Computername -ne "" ) {
     $services.keys | Sort-object $_ | ForEach-Object {
         $item = $_
         $service = $($services[$_])
@@ -302,6 +303,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             catch {}
         }
     }
+}
 }
 $stream_reader.Dispose()
 
