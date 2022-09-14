@@ -127,7 +127,8 @@ $report = $report + "<h4>Open Ports for</h4>"
 
 $report = $report + "<table style=""width:100%"">
   <tr>
-  <th>IP</th> 
+  <th>Host</th> 
+  <th>AltName</th>
     <th>Port</th>
     <th>Is Open</th>
     <th>Service</th> 
@@ -137,7 +138,7 @@ $report = $report + "<table style=""width:100%"">
 
 $trig_null = $null
 #$trig_http = "OPTIONS / HTTP/1.0`r`n`r`n"
-$trig_http ="GET / HTTP/1.0`r`n`r`n"
+$trig_http = "GET / HTTP/1.0`r`n`r`n"
 #$trig_http="HEAD /  HTTP/1.0`r`n`r`n";
 $trig_mssql = hextostring("100100e000000100d80000000100007100000000000000076c04000000000000e0030000000000000908000056000a006a000a007e0000007e002000be00090000000000d0000400d8000000d8000000000c29c6634200000000c8000000420061006e006e00650072004700720061006200420061006e006e006500720047007200610062004d006900630072006f0073006f0066007400200044006100740061002000410063006300650073007300200043006f006d0070006f006e0065006e00740073003100320037002e0030002e0030002e0031004f00440042004300")
 $trig_ldap = hextostring("300c0201016007020103040080003035020102633004000a01000a0100020100020100010100870b6f626a656374436c6173733010040e6e616d696e67436f6e7465787473");
@@ -158,116 +159,125 @@ $trig_imap = "CAPABILITY`r`n"
 $stream_reader = New-Object System.IO.StreamReader ( $firewalllist )
 while ($null -ne ($current_line = $stream_reader.ReadLine())) {
     $Computername = $current_line
-   if ($Computername -ne "" ) {
-    $services.keys | Sort-object $_ | ForEach-Object {
-        $item = $_
-        $service = $($services[$_])
-        write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
-        $rts = ""
-       
-        $TCPTimeout = 300
-             
+    if ($Computername -ne "" ) {
         try {
-            $tcpConnection = new-object System.Net.Sockets.TcpClient
-            $AsyncResult = $tcpConnection.BeginConnect($Computername, $item, $null, $null)
-            $Wait = $AsyncResult.AsyncWaitHandle.WaitOne($TCPtimeout) 
+            $dnsRecord = Resolve-DnsName -Name $Computername -ErrorAction Stop | Select-Object -ExpandProperty namehost
         }
-        catch {}
-
-        If ($Wait) {  
-            
-            write-host "Host" $Computername "Port: " $item "Service: " $service "is open"
-            $tcpStream = $tcpConnection.GetStream() 
-            $tcpConnection.ReceiveTimeout = 2000;
-            $tcpConnection.SendTimeout = 2000;
-           
-            $reader = New-Object System.IO.StreamReader($tcpStream)
-            $writer = New-Object System.IO.StreamWriter($tcpStream)
-            $writer.AutoFlush = $true
-
+        catch { $dnsRecord = "NA" }
+    
+        $services.keys | Sort-object $_ | ForEach-Object {
+            $item = $_
+            $service = $($services[$_])
+            write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
+       
+        
+       
+       
+            $rts = ""
+       
+            $TCPTimeout = 500
+             
             try {
+                $tcpConnection = new-object System.Net.Sockets.TcpClient
+                $AsyncResult = $tcpConnection.BeginConnect($Computername, $item, $null, $null)
+                $Wait = $AsyncResult.AsyncWaitHandle.WaitOne($TCPtimeout) 
+            }
+            catch {}
+
+            If ($Wait) {  
+            
+                write-host "Host" $Computername "Port: " $item "Service: " $service "is open"
+                $tcpStream = $tcpConnection.GetStream() 
+                $tcpConnection.ReceiveTimeout = 2000;
+                $tcpConnection.SendTimeout = 2000;
+           
+                $reader = New-Object System.IO.StreamReader($tcpStream)
+                $writer = New-Object System.IO.StreamWriter($tcpStream)
+                $writer.AutoFlush = $true
+
+                try {
                 
-                switch ( $item ) {
+                    switch ( $item ) {
                     ({ 80, 443, 631 -contains $PSItem }) {
-                        $writer.WriteLine($trig_http)
-                        break;
-                    }
+                            $writer.WriteLine($trig_http)
+                            break;
+                        }
                     ({ 25, 26, 465, 587 -contains $PSItem }) {
-                        $writer.WriteLine($trig_smtp)
-                        break;
-                    }
+                            $writer.WriteLine($trig_smtp)
+                            break;
+                        }
                     ({ 143, 993 -contains $PSItem }) {
-                        $writer.WriteLine($trig_imap)
-                        break;
-                    }
+                            $writer.WriteLine($trig_imap)
+                            break;
+                        }
                     ({ 21, 69, 247, 1758, 1818, 3713 -contains $PSItem }) {
-                        $writer.WriteLine($trig_ftp)
-                        break;
-                    }
+                            $writer.WriteLine($trig_ftp)
+                            break;
+                        }
                     ({ 23 -contains $PSItem }) {
-                        $writer.WriteLine($trig_telnet)
-                        break;
-                    }
+                            $writer.WriteLine($trig_telnet)
+                            break;
+                        }
                     ({ 109, 110, 995 -contains $PSItem }) {
-                        $writer.WriteLine($trig_pop)
-                        break;
-                    }
+                            $writer.WriteLine($trig_pop)
+                            break;
+                        }
                     ({ 119 -contains $PSItem }) {
-                        $writer.WriteLine($trig_nntp)
-                        break;
-                    }
+                            $writer.WriteLine($trig_nntp)
+                            break;
+                        }
                     ({ 137 -contains $PSItem }) {
-                        $writer.WriteLine($trig_nbns)
-                        break;
-                    }
+                            $writer.WriteLine($trig_nbns)
+                            break;
+                        }
                     ({ 389, 636 -contains $PSItem }) {
-                        $writer.WriteLine($trig_ldap)
-                        break;
-                    }
+                            $writer.WriteLine($trig_ldap)
+                            break;
+                        }
                      ({ 1433 -contains $PSItem }) {
-                        $writer.WriteLine($trig_mssql)
-                        break;
-                    }
+                            $writer.WriteLine($trig_mssql)
+                            break;
+                        }
                     ({ 162 -contains $PSItem }) {
-                        $writer.WriteLine($trig_snmp)
-                        break;
-                    }
+                            $writer.WriteLine($trig_snmp)
+                            break;
+                        }
                  
                     ({ 123 -contains $PSItem }) {
-                        $writer.WriteLine($trig_ntp)
-                        break;
-                    }
+                            $writer.WriteLine($trig_ntp)
+                            break;
+                        }
                      ({ 79 -contains $PSItem }) {
-                        $writer.WriteLine($trig_finger)
-                        break;
-                    }
+                            $writer.WriteLine($trig_finger)
+                            break;
+                        }
                      ({ 7, 9 -contains $PSItem }) {
-                        $writer.WriteLine($trig_echo)
-                        break;
-                    }
+                            $writer.WriteLine($trig_echo)
+                            break;
+                        }
                      ({ 256 -contains $PSItem }) {
-                        $writer.WriteLine($trig_fw1admin)
-                        break;
+                            $writer.WriteLine($trig_fw1admin)
+                            break;
+                        }
+                        Default {
+                            $writer.WriteLine($trig_null)
+                            break;
+                        }
                     }
-                    Default {
-                        $writer.WriteLine($trig_null)
-                        break;
-                    }
-                }
 
-                #Start-Sleep -Seconds 4
-                try {
-                while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
+                    #Start-Sleep -Seconds 4
+                    try {
+                        while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
                    
-                        $rts = $rts + ([char]$reader.Read())
-                    }
+                            $rts = $rts + ([char]$reader.Read())
+                        }
                     
-                }
-                catch {
-                    Write-Warning  $Error[0]
-                   # $rts = $rts + $Error[0]
-                }
-                <#try { 
+                    }
+                    catch {
+                        Write-Warning  $Error[0]
+                        # $rts = $rts + $Error[0]
+                    }
+                    <#try { 
                                
                     $rts = $reader.ReadToEnd()
                      
@@ -277,33 +287,33 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     $rts = $Error[0]
                 }#>
     
-            }
-            catch {
-                Write-Warning  $Error[0]
-                #$rts = $Error[0]
-            }
+                }
+                catch {
+                    Write-Warning  $Error[0]
+                    #$rts = $Error[0]
+                }
 
-            $rts = $rts -replace '<.*?>', ''
-            $rts = $rts -replace "`r`n", "<br>"          
-            write-host $Computername $rts
+                $rts = $rts -replace '<.*?>', ''
+                $rts = $rts -replace "`r`n", "<br>"          
+                write-host $Computername $rts
 
-            $report = $report + "<tr><td>" + $Computername + "</td><td>" + $item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
+                $report = $report + "<tr><td>" + $Computername + "</td><td>" + $dnsRecord + "</td><td>" + $item + "</td><td><p style=`"color:red`">Yes</p></td><td>" + $service + "</td><td><p style=`"color:blue`">" + $rts + "</p></td></tr>" 
         
-            try {
-                $reader.Close()
+                try {
+                    $reader.Close()
+                }
+                Catch {}
+                try {
+                    $writer.Close()
+                }
+                catch {}
+                try { 
+                    $tcpConnection.Close()
+                } 
+                catch {}
             }
-            Catch {}
-            try {
-                $writer.Close()
-            }
-            catch {}
-            try { 
-                $tcpConnection.Close()
-            } 
-            catch {}
         }
     }
-}
 }
 $stream_reader.Dispose()
 
