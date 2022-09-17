@@ -269,9 +269,10 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     try {
                         while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
                            $character=[char]$reader.Read()
-                            if(([byte][char]$character -ge 32) -and ([byte][char]$character -le 126)) {
+                           if(((([byte][char]$character -ge 32) -and ([byte][char]$character -le 126))-or (13,10,9 -contains [byte][char]$character) )) {
                                 $rts += $character
                             }
+                            else{$rts+="{0:X2} " -f [byte][char]$character}
                             #$rts = $rts + ([char]$reader.Read())
                         }
                     
