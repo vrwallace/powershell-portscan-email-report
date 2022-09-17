@@ -268,8 +268,11 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     #Start-Sleep -Seconds 4
                     try {
                         while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
-                   
-                            $rts = $rts + ([char]$reader.Read())
+                           $character=[char]$reader.Read()
+                            if(([byte][char]$character -ge 32) -and ([byte][char]$character -le 126)) {
+                                $rts += $character
+                            }
+                            #$rts = $rts + ([char]$reader.Read())
                         }
                     
                     }
