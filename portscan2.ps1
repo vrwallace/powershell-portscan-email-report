@@ -13,9 +13,20 @@ function HexToString($i) {
     return $r
 }
 
-
-
-
+add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+            return true;
+        }
+ }
+"@
+[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+#[System.Net.ServicePointManager]::SecurityProtocol = 'TLS12'
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12 
 $services = @{
     7     = "echo";
     9     = "discard";
@@ -99,8 +110,6 @@ $services = @{
     80     = "http"
 }#>
 
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
-
 
 #settings
 $Version = "1.04ps"
@@ -110,7 +119,7 @@ $smtpfrom = "someone@somewhere.net"
 $smtpto = "someone@somewhere.net"
 $sendusername = "someone@somewhere.net"
 $sendpassword = "password"
-$firewalllist = "C:\support\firewalllist.txt"
+$firewalllist = "C:\support\firewalllistsmall.txt"
 
 
 $report = @"
@@ -139,6 +148,8 @@ $report = $report + "<table style=""width:100%"">
 $trig_null = $null
 #$trig_http = "OPTIONS / HTTP/1.0`r`n`r`n"
 $trig_http = "GET / HTTP/1.0`r`n`r`n"
+#$trig_http = "GET /`r`n`r`n"
+
 #$trig_http="HEAD /  HTTP/1.0`r`n`r`n";
 $trig_mssql = hextostring("100100e000000100d80000000100007100000000000000076c04000000000000e0030000000000000908000056000a006a000a007e0000007e002000be00090000000000d0000400d8000000d8000000000c29c6634200000000c8000000420061006e006e00650072004700720061006200420061006e006e006500720047007200610062004d006900630072006f0073006f0066007400200044006100740061002000410063006300650073007300200043006f006d0070006f006e0065006e00740073003100320037002e0030002e0030002e0031004f00440042004300")
 $trig_ldap = hextostring("300c0201016007020103040080003035020102633004000a01000a0100020100020100010100870b6f626a656374436c6173733010040e6e616d696e67436f6e7465787473");
@@ -170,9 +181,6 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             $service = $($services[$_])
             write-host "Host" $Computername "Scanning Port: " $item "Service: " $service
        
-        
-       
-       
             $rts = ""
        
             $TCPTimeout = 500
@@ -188,11 +196,37 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
             
                 write-host "Host" $Computername "Port: " $item "Service: " $service "is open"
                 $tcpStream = $tcpConnection.GetStream() 
+
+                <# SSL Attempt start#>
+                
+                try {
+                    
+                    $sslStream = New-Object System.Net.Security.SslStream($tcpStream)
+                    $sslStream.ReadTimeout = 5000
+                    $sslStream.WriteTimeout = 5000
+                    $sslStream.AuthenticateAsClient($Computername)
+                    
+                    
+                }
+                catch {write-warning $Error[0]}
+                
+                if ($sslStream.IsAuthenticated) {
+                    $newstream = $sslStream
+                    write-warning -message "Authenticated"
+                }
+                else {
+                    $newstream = $tcpStream
+                    write-warning -message "Not Authenticated"
+                }
+                <# SSL Attempt end#>
+
+                #$newstream = $tcpStream
+                
                 $tcpConnection.ReceiveTimeout = 2000;
                 $tcpConnection.SendTimeout = 2000;
            
-                $reader = New-Object System.IO.StreamReader($tcpStream)
-                $writer = New-Object System.IO.StreamWriter($tcpStream)
+                $reader = New-Object System.IO.StreamReader($newstream)
+                $writer = New-Object System.IO.StreamWriter($newstream)
                 $writer.AutoFlush = $true
 
                 try {
@@ -265,36 +299,23 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                         }
                     }
 
-                    #Start-Sleep -Seconds 4
                     try {
                         while (($reader.Peek() -ne -1) -or ($tcpConnection.Available)) {        
-                           $character=[char]$reader.Read()
-                           if(((([byte][char]$character -ge 32) -and ([byte][char]$character -le 126))-or (13,10,9 -contains [byte][char]$character) )) {
+                            $character = [char]$reader.Read()
+                            if (((([byte][char]$character -ge 32) -and ([byte][char]$character -le 126)) -or (13, 10, 9 -contains [byte][char]$character) )) {
                                 $rts += $character
                             }
-                            else{$rts+="{0:X2} " -f [byte][char]$character}
-                            #$rts = $rts + ([char]$reader.Read())
+                            else { $rts += "{0:X2} " -f [byte][char]$character }
                         }
                     
                     }
                     catch {
                         Write-Warning  $Error[0]
-                        # $rts = $rts + $Error[0]
                     }
-                    <#try { 
-                               
-                    $rts = $reader.ReadToEnd()
-                     
+       
                 }
                 catch {
                     Write-Warning  $Error[0]
-                    $rts = $Error[0]
-                }#>
-    
-                }
-                catch {
-                    Write-Warning  $Error[0]
-                    #$rts = $Error[0]
                 }
 
                 $rts = $rts -replace '<.*?>', ''
