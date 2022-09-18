@@ -27,6 +27,34 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 #[System.Net.ServicePointManager]::SecurityProtocol = 'TLS12'
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12 
+
+Add-Type @'
+public class MyNoValidate {
+  private static System.Boolean bypassvalidation(
+    System.Object sender,
+    System.Security.Cryptography.X509Certificates.X509Certificate certificate,
+    System.Security.Cryptography.X509Certificates.X509Chain chain,
+    System.Net.Security.SslPolicyErrors sslPolicyErrors
+  ) {
+    return true;
+  }
+ 
+  public static System.Net.Security.RemoteCertificateValidationCallback getcallback() {
+    System.Net.Security.RemoteCertificateValidationCallback cb;
+ 
+    cb = new System.Net.Security.RemoteCertificateValidationCallback(
+      bypassvalidation
+    );
+ 
+    return cb;
+  }
+}
+'@
+[System.Net.Security.SslStream]$SslStream = $null
+[System.Net.Security.RemoteCertificateValidationCallback]$Callback = $null
+$Callback = [MyNoValidate]::getcallback()
+
+
 $services = @{
     7     = "echo";
     9     = "discard";
@@ -198,10 +226,11 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 $tcpStream = $tcpConnection.GetStream() 
 
                 <# SSL Attempt start#>
-                
+                if (22,80 -notcontains $item ){
                 try {
                     
-                    $sslStream = New-Object System.Net.Security.SslStream($tcpStream)
+                    #$sslStream = New-Object System.Net.Security.SslStream($tcpStream)
+                    $sslStream = New-Object System.Net.Security.SslStream($tcpStream,$True,$Callback)
                     $sslStream.ReadTimeout = 5000
                     $sslStream.WriteTimeout = 5000
                     $sslStream.AuthenticateAsClient($Computername)
@@ -218,6 +247,7 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                     $newstream = $tcpStream
                     write-warning -message "Not Authenticated"
                 }
+            }else {$newstream = $tcpStream}
                 <# SSL Attempt end#>
 
                 #$newstream = $tcpStream
