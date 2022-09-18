@@ -226,7 +226,8 @@ while ($null -ne ($current_line = $stream_reader.ReadLine())) {
                 $tcpStream = $tcpConnection.GetStream() 
 
                 <# SSL Attempt start#>
-                if (22,80 -notcontains $item ){
+                if (443,4433,995,993,990,992,636,465,115,989,1723,3713 -contains $item ){
+                       
                 try {
                     
                     #$sslStream = New-Object System.Net.Security.SslStream($tcpStream)
